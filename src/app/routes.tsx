@@ -6,6 +6,7 @@ import { PatientDetail } from "./components/PatientDetail";
 import { ClinicalEvaluation } from "./components/ClinicalEvaluation";
 import { InferenceEngine } from "./components/InferenceEngine";
 import { Layout } from "./components/Layout";
+import { PrivateRoute } from "./components/PrivateRoute";
 
 export const router = createBrowserRouter([
   {
@@ -14,14 +15,19 @@ export const router = createBrowserRouter([
   },
   {
     path: "/",
-    Component: Layout,
+    Component: PrivateRoute,
     children: [
-      { index: true, Component: Dashboard },
-      { path: "patients", Component: Patients },
-      { path: "patients/:id", Component: PatientDetail },
-      { path: "evaluation", Component: ClinicalEvaluation },
-      { path: "evaluation/:id", Component: ClinicalEvaluation },
-      { path: "inference/:evaluationId", Component: InferenceEngine },
+      {
+        Component: Layout,
+        children: [
+          { index: true, Component: Dashboard },
+          { path: "patients", Component: Patients },
+          { path: "patients/:id", Component: PatientDetail },
+          { path: "evaluation", Component: ClinicalEvaluation },
+          { path: "evaluation/:id", Component: ClinicalEvaluation },
+          { path: "inference/:evaluationId", Component: InferenceEngine },
+        ],
+      },
     ],
   },
 ]);
