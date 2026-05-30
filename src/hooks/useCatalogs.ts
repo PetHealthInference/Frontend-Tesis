@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { catalogService } from "../services/catalogService";
-import type { Breed, ClinicalVariable, Disease, Species, Symptom } from "../types/catalogs";
+import type {
+  Breed,
+  ClinicalVariable,
+  Disease,
+  RiskLevel,
+  Species,
+  Symptom,
+} from "../types/catalogs";
 
 interface CatalogState<T> {
   data: T;
@@ -80,18 +87,37 @@ export function useDiseases(): CatalogState<Disease[]> {
   );
 }
 
+export function useRiskLevels(): CatalogState<RiskLevel[]> {
+  return useCatalogResource<RiskLevel[]>(
+    useCallback(() => catalogService.getRiskLevels(), []),
+    [],
+  );
+}
+
 export function useCatalogs() {
   const species = useSpecies();
   const symptoms = useSymptoms();
   const clinicalVariables = useClinicalVariables();
   const diseases = useDiseases();
+  const riskLevels = useRiskLevels();
 
   return {
     species,
     symptoms,
     clinicalVariables,
     diseases,
-    loading: species.loading || symptoms.loading || clinicalVariables.loading || diseases.loading,
-    error: species.error ?? symptoms.error ?? clinicalVariables.error ?? diseases.error,
+    riskLevels,
+    loading:
+      species.loading ||
+      symptoms.loading ||
+      clinicalVariables.loading ||
+      diseases.loading ||
+      riskLevels.loading,
+    error:
+      species.error ??
+      symptoms.error ??
+      clinicalVariables.error ??
+      diseases.error ??
+      riskLevels.error,
   };
 }

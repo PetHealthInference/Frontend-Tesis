@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { Search, PlusCircle, Filter, X, AlertCircle } from "lucide-react";
 import { useBreeds, useSpecies } from "../../hooks/useCatalogs";
 
-const mockPatients = [
+const legacyPatientsPreview = [
   { id: 1, name: "Max", species: "Perro", breed: "Golden Retriever", owner: "Juan Perez", age: "3 anos", status: "Estable" },
   { id: 2, name: "Luna", species: "Gato", breed: "Siames", owner: "Maria Garcia", age: "2 anos", status: "En Observacion" },
   { id: 3, name: "Rocky", species: "Perro", breed: "Pastor Aleman", owner: "Carlos Lopez", age: "5 anos", status: "Critico" },
@@ -21,9 +21,9 @@ export function Patients() {
   const [filterSpecies, setFilterSpecies] = useState("all");
   const [newPatient, setNewPatient] = useState({
     name: "",
+    owner_id: "",
     species_id: "",
     breed_id: "",
-    owner: "",
     age: "",
   });
 
@@ -34,7 +34,7 @@ export function Patients() {
     error: breedsError,
   } = useBreeds(selectedSpeciesId);
 
-  const filteredPatients = mockPatients.filter((patient) => {
+  const filteredPatients = legacyPatientsPreview.filter((patient) => {
     const matchesSearch =
       patient.name.toLowerCase().includes(search.toLowerCase()) ||
       patient.owner.toLowerCase().includes(search.toLowerCase());
@@ -49,13 +49,13 @@ export function Patients() {
   const handleCreatePatient = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newPatient.species_id) {
+    if (!newPatient.owner_id || !newPatient.species_id) {
       return;
     }
 
     const payload = {
       name: newPatient.name,
-      owner_id: null,
+      owner_id: Number(newPatient.owner_id),
       species_id: Number(newPatient.species_id),
       breed_id: newPatient.breed_id ? Number(newPatient.breed_id) : null,
     };
@@ -171,22 +171,27 @@ export function Patients() {
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre del Propietario
+                  ID del Propietario
                 </label>
                 <input
-                  type="text"
-                  value={newPatient.owner}
-                  onChange={(e) => setNewPatient({ ...newPatient, owner: e.target.value })}
+                  type="number"
+                  min="1"
+                  value={newPatient.owner_id}
+                  onChange={(e) => setNewPatient({ ...newPatient, owner_id: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Ej: 1"
                   required
                 />
+                <p className="text-sm text-gray-500 mt-2">
+                  La seleccion completa de duenos queda para el Paso Frontend 3.
+                </p>
               </div>
             </div>
 
             <div className="flex gap-3 pt-4">
               <button
                 type="submit"
-                disabled={!newPatient.species_id || speciesLoading || Boolean(speciesError)}
+                disabled={!newPatient.owner_id || !newPatient.species_id || speciesLoading || Boolean(speciesError)}
                 className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 Guardar Paciente

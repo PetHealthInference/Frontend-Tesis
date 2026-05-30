@@ -2,6 +2,7 @@ import type {
   Breed,
   ClinicalVariable,
   Disease,
+  RiskLevel,
   Species,
   Symptom,
 } from "../types/catalogs";
@@ -28,4 +29,7 @@ export const catalogService = {
     return apiClient.get<Disease[]>("/api/v1/diseases");
   },
 
+  getRiskLevels(): Promise<RiskLevel[]> {
+    return apiClient.get<RiskLevel[]>("/api/v1/risk-levels");
+  },
 };

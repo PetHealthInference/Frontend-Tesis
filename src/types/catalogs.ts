@@ -7,6 +7,7 @@ export interface Breed {
   id: number;
   species_id: number;
   name: string;
+  species?: Species | null;
 }
 
 export interface Symptom {
@@ -40,8 +41,11 @@ export interface Disease {
 
 export interface RiskLevel {
   id: number;
+  code: string;
   name: string;
-  description?: string | null;
-  min_score?: number | null;
-  max_score?: number | null;
+  description: string | null;
+  min_probability: number | null;
+  max_probability: number | null;
+  sort_order: number;
+  is_active: boolean;
 }
