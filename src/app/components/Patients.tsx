@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Search, PlusCircle, Filter, X, AlertCircle } from "lucide-react";
+import { Search, PlusCircle, Filter, X, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { useBreeds, useSpecies } from "../../hooks/useCatalogs";
+import { useOwners } from "../../hooks/useOwners";
+import { patientService } from "../../services/patientService";
+import type { PatientCreate } from "../../types/patients";
+import { OwnerForm } from "./OwnerForm";
 
 const legacyPatientsPreview = [
   { id: 1, name: "Max", species: "Perro", breed: "Golden Retriever", owner: "Juan Perez", age: "3 anos", status: "Estable" },
@@ -17,14 +21,20 @@ export function Patients() {
   const showNewForm = searchParams.get("action") === "new";
 
   const { data: species, loading: speciesLoading, error: speciesError } = useSpecies();
+  const { data: owners, loading: ownersLoading, error: ownersError, refetch: refetchOwners } = useOwners();
   const [search, setSearch] = useState("");
   const [filterSpecies, setFilterSpecies] = useState("all");
+  const [patientLoading, setPatientLoading] = useState(false);
+  const [patientError, setPatientError] = useState<string | null>(null);
+  const [patientSuccess, setPatientSuccess] = useState<string | null>(null);
   const [newPatient, setNewPatient] = useState({
     name: "",
     owner_id: "",
     species_id: "",
     breed_id: "",
-    age: "",
+    sex: "",
+    birth_date: "",
+    weight: "",
   });
 
   const selectedSpeciesId = newPatient.species_id ? Number(newPatient.species_id) : null;
@@ -46,23 +56,55 @@ export function Patients() {
     setNewPatient({ ...newPatient, species_id: speciesId, breed_id: "" });
   };
 
-  const handleCreatePatient = (e: React.FormEvent) => {
+  const handleCreatePatient = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPatientError(null);
+    setPatientSuccess(null);
 
-    if (!newPatient.owner_id || !newPatient.species_id) {
+    if (!newPatient.owner_id) {
+      setPatientError("Selecciona o registra un propietario antes de crear el paciente.");
       return;
     }
 
-    const payload = {
-      name: newPatient.name,
+    if (!owners.some((owner) => owner.id === Number(newPatient.owner_id))) {
+      setPatientError("El propietario seleccionado no existe en el listado cargado desde backend.");
+      return;
+    }
+
+    if (!newPatient.name.trim() || !newPatient.species_id || !newPatient.breed_id || !newPatient.sex) {
+      setPatientError("Completa nombre, propietario, especie, raza y sexo del paciente.");
+      return;
+    }
+
+    const payload: PatientCreate = {
+      name: newPatient.name.trim(),
       owner_id: Number(newPatient.owner_id),
       species_id: Number(newPatient.species_id),
-      breed_id: newPatient.breed_id ? Number(newPatient.breed_id) : null,
+      breed_id: Number(newPatient.breed_id),
+      sex: newPatient.sex,
+      birth_date: newPatient.birth_date || null,
+      weight: newPatient.weight ? Number(newPatient.weight) : null,
     };
 
-    console.info("Paciente preparado para API:", payload);
-    setSearchParams({});
-    navigate("/patients");
+    setPatientLoading(true);
+
+    try {
+      const createdPatient = await patientService.createPatient(payload);
+      setPatientSuccess(`Paciente ${createdPatient.name} registrado con propietario ${createdPatient.owner.first_name}.`);
+      setNewPatient({
+        name: "",
+        owner_id: "",
+        species_id: "",
+        breed_id: "",
+        sex: "",
+        birth_date: "",
+        weight: "",
+      });
+    } catch (error) {
+      setPatientError(error instanceof Error ? error.message : "No fue posible registrar el paciente.");
+    } finally {
+      setPatientLoading(false);
+    }
   };
 
   if (showNewForm) {
@@ -79,17 +121,55 @@ export function Patients() {
             </button>
           </div>
 
-          {(speciesError || breedsError) && (
+          {(speciesError || breedsError || ownersError || patientError) && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-red-800">
-                {speciesError ?? breedsError}
+                {speciesError ?? breedsError ?? ownersError ?? patientError}
               </p>
             </div>
           )}
 
-          <form onSubmit={handleCreatePatient} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {patientSuccess && (
+            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-green-800">{patientSuccess}</p>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <OwnerForm
+              onAfterCreate={refetchOwners}
+              onCreated={(owner) => setNewPatient((current) => ({ ...current, owner_id: String(owner.id) }))}
+            />
+
+            <form onSubmit={handleCreatePatient} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Propietario
+                </label>
+                <select
+                  value={newPatient.owner_id}
+                  onChange={(e) => setNewPatient({ ...newPatient, owner_id: e.target.value })}
+                  disabled={ownersLoading || Boolean(ownersError)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100"
+                  required
+                >
+                  <option value="">
+                    {ownersLoading ? "Cargando propietarios..." : "Selecciona un propietario"}
+                  </option>
+                  {owners.map((owner) => (
+                    <option key={owner.id} value={owner.id}>
+                      #{owner.id} - {owner.first_name} {owner.last_name ?? ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-sm text-gray-500 mt-2">
+                  El listado proviene de GET /api/v1/owners/. Si creas un propietario arriba, se selecciona automaticamente.
+                </p>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Nombre del Paciente
@@ -134,6 +214,7 @@ export function Patients() {
                   onChange={(e) => setNewPatient({ ...newPatient, breed_id: e.target.value })}
                   disabled={!newPatient.species_id || breedsLoading || Boolean(breedsError)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100"
+                  required
                 >
                   <option value="">
                     {!newPatient.species_id
@@ -157,54 +238,76 @@ export function Patients() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Edad
+                  Sexo
+                </label>
+                <select
+                  value={newPatient.sex}
+                  onChange={(e) => setNewPatient({ ...newPatient, sex: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Selecciona sexo</option>
+                  <option value="Macho">Macho</option>
+                  <option value="Hembra">Hembra</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fecha de nacimiento
                 </label>
                 <input
-                  type="text"
-                  value={newPatient.age}
-                  onChange={(e) => setNewPatient({ ...newPatient, age: e.target.value })}
+                  type="date"
+                  value={newPatient.birth_date}
+                  onChange={(e) => setNewPatient({ ...newPatient, birth_date: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Ej: 3 anos"
-                  required
                 />
               </div>
 
-              <div className="md:col-span-2">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ID del Propietario
+                  Peso
                 </label>
                 <input
                   type="number"
-                  min="1"
-                  value={newPatient.owner_id}
-                  onChange={(e) => setNewPatient({ ...newPatient, owner_id: e.target.value })}
+                  min="0.1"
+                  step="0.1"
+                  value={newPatient.weight}
+                  onChange={(e) => setNewPatient({ ...newPatient, weight: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Ej: 1"
-                  required
+                  placeholder="Kg"
                 />
-                <p className="text-sm text-gray-500 mt-2">
-                  La seleccion completa de duenos queda para el Paso Frontend 3.
-                </p>
               </div>
-            </div>
+              </div>
 
-            <div className="flex gap-3 pt-4">
-              <button
-                type="submit"
-                disabled={!newPatient.owner_id || !newPatient.species_id || speciesLoading || Boolean(speciesError)}
-                className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                Guardar Paciente
-              </button>
-              <button
-                type="button"
-                onClick={() => setSearchParams({})}
-                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  disabled={
+                    patientLoading ||
+                    !newPatient.owner_id ||
+                    !newPatient.species_id ||
+                    !newPatient.breed_id ||
+                    !newPatient.sex ||
+                    speciesLoading ||
+                    ownersLoading ||
+                    Boolean(speciesError || ownersError)
+                  }
+                  className="flex-1 inline-flex items-center justify-center gap-2 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {patientLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {patientLoading ? "Guardando..." : "Guardar Paciente"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchParams({})}
+                  className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     );
