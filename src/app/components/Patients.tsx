@@ -1,30 +1,24 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { Search, PlusCircle, Filter, X, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { useBreeds, useSpecies } from "../../hooks/useCatalogs";
 import { useOwners } from "../../hooks/useOwners";
-import { patientService } from "../../services/patientService";
+import { useCreatePatient, usePatients } from "../../hooks/usePatients";
 import type { PatientCreate } from "../../types/patients";
 import { OwnerForm } from "./OwnerForm";
 
-const legacyPatientsPreview = [
-  { id: 1, name: "Max", species: "Perro", breed: "Golden Retriever", owner: "Juan Perez", age: "3 anos", status: "Estable" },
-  { id: 2, name: "Luna", species: "Gato", breed: "Siames", owner: "Maria Garcia", age: "2 anos", status: "En Observacion" },
-  { id: 3, name: "Rocky", species: "Perro", breed: "Pastor Aleman", owner: "Carlos Lopez", age: "5 anos", status: "Critico" },
-  { id: 4, name: "Michi", species: "Gato", breed: "Persa", owner: "Ana Martinez", age: "1 ano", status: "Estable" },
-  { id: 5, name: "Toby", species: "Perro", breed: "Beagle", owner: "Luis Rodriguez", age: "4 anos", status: "Estable" },
-];
-
 export function Patients() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const showNewForm = searchParams.get("action") === "new";
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const showNewForm = searchParams.get("action") === "new" || location.pathname.endsWith("/new");
 
   const { data: species, loading: speciesLoading, error: speciesError } = useSpecies();
   const { data: owners, loading: ownersLoading, error: ownersError, refetch: refetchOwners } = useOwners();
+  const { data: patients, loading: patientsLoading, error: patientsError, refetch: refetchPatients } = usePatients();
+  const createPatient = useCreatePatient();
   const [search, setSearch] = useState("");
   const [filterSpecies, setFilterSpecies] = useState("all");
-  const [patientLoading, setPatientLoading] = useState(false);
   const [patientError, setPatientError] = useState<string | null>(null);
   const [patientSuccess, setPatientSuccess] = useState<string | null>(null);
   const [newPatient, setNewPatient] = useState({
@@ -44,11 +38,12 @@ export function Patients() {
     error: breedsError,
   } = useBreeds(selectedSpeciesId);
 
-  const filteredPatients = legacyPatientsPreview.filter((patient) => {
+  const filteredPatients = patients.filter((patient) => {
+    const ownerName = `${patient.owner.first_name} ${patient.owner.last_name ?? ""}`.trim();
     const matchesSearch =
       patient.name.toLowerCase().includes(search.toLowerCase()) ||
-      patient.owner.toLowerCase().includes(search.toLowerCase());
-    const matchesFilter = filterSpecies === "all" || patient.species === filterSpecies;
+      ownerName.toLowerCase().includes(search.toLowerCase());
+    const matchesFilter = filterSpecies === "all" || patient.species.name === filterSpecies;
     return matchesSearch && matchesFilter;
   });
 
@@ -76,6 +71,17 @@ export function Patients() {
       return;
     }
 
+    const selectedBreed = breeds.find((breed) => breed.id === Number(newPatient.breed_id));
+    if (!selectedBreed || selectedBreed.species_id !== Number(newPatient.species_id)) {
+      setPatientError("La raza seleccionada no pertenece a la especie elegida.");
+      return;
+    }
+
+    if (newPatient.weight && Number(newPatient.weight) <= 0) {
+      setPatientError("El peso debe ser un numero positivo.");
+      return;
+    }
+
     const payload: PatientCreate = {
       name: newPatient.name.trim(),
       owner_id: Number(newPatient.owner_id),
@@ -86,11 +92,10 @@ export function Patients() {
       weight: newPatient.weight ? Number(newPatient.weight) : null,
     };
 
-    setPatientLoading(true);
-
     try {
-      const createdPatient = await patientService.createPatient(payload);
+      const createdPatient = await createPatient.submit(payload);
       setPatientSuccess(`Paciente ${createdPatient.name} registrado con propietario ${createdPatient.owner.first_name}.`);
+      await refetchPatients();
       setNewPatient({
         name: "",
         owner_id: "",
@@ -102,8 +107,6 @@ export function Patients() {
       });
     } catch (error) {
       setPatientError(error instanceof Error ? error.message : "No fue posible registrar el paciente.");
-    } finally {
-      setPatientLoading(false);
     }
   };
 
@@ -114,26 +117,26 @@ export function Patients() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Registrar Nuevo Paciente</h1>
             <button
-              onClick={() => setSearchParams({})}
+              onClick={() => navigate("/patients")}
               className="p-2 hover:bg-gray-100 rounded-lg transition"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {(speciesError || breedsError || ownersError || patientError) && (
+          {(speciesError || breedsError || ownersError || createPatient.error || patientError) && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-red-800">
-                {speciesError ?? breedsError ?? ownersError ?? patientError}
+                {speciesError ?? breedsError ?? ownersError ?? createPatient.error ?? patientError}
               </p>
             </div>
           )}
 
-          {patientSuccess && (
+          {(patientSuccess || createPatient.success) && (
             <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
               <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-green-800">{patientSuccess}</p>
+              <p className="text-sm text-green-800">{patientSuccess ?? createPatient.success}</p>
             </div>
           )}
 
@@ -284,7 +287,7 @@ export function Patients() {
                 <button
                   type="submit"
                   disabled={
-                    patientLoading ||
+                    createPatient.loading ||
                     !newPatient.owner_id ||
                     !newPatient.species_id ||
                     !newPatient.breed_id ||
@@ -295,12 +298,12 @@ export function Patients() {
                   }
                   className="flex-1 inline-flex items-center justify-center gap-2 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {patientLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {patientLoading ? "Guardando..." : "Guardar Paciente"}
+                  {createPatient.loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {createPatient.loading ? "Guardando..." : "Guardar Paciente"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSearchParams({})}
+                  onClick={() => navigate("/patients")}
                   className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
                   Cancelar
@@ -321,7 +324,7 @@ export function Patients() {
           <p className="text-gray-600 mt-1">Administra y consulta el registro de pacientes</p>
         </div>
         <button
-          onClick={() => setSearchParams({ action: "new" })}
+          onClick={() => navigate("/patients/new")}
           className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
         >
           <PlusCircle className="w-5 h-5" />
@@ -330,6 +333,13 @@ export function Patients() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-6">
+        {patientsError && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-red-800">{patientsError}</p>
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex-1 relative">
             <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -366,11 +376,25 @@ export function Patients() {
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Paciente</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Especie/Raza</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Propietario</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Edad</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Nacimiento</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
+              {patientsLoading && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-600">
+                    Cargando pacientes reales desde backend...
+                  </td>
+                </tr>
+              )}
+              {!patientsLoading && filteredPatients.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-600">
+                    No hay pacientes registrados para los filtros actuales.
+                  </td>
+                </tr>
+              )}
               {filteredPatients.map((patient) => (
                 <tr
                   key={patient.id}
@@ -385,20 +409,18 @@ export function Patients() {
                       <span className="font-medium text-gray-900">{patient.name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-700">{patient.species} - {patient.breed}</td>
-                  <td className="px-4 py-3 text-gray-700">{patient.owner}</td>
-                  <td className="px-4 py-3 text-gray-700">{patient.age}</td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {patient.species.name} - {patient.breed?.name ?? "Sin raza"}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {patient.owner.first_name} {patient.owner.last_name ?? ""}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {patient.birth_date ?? "Sin fecha"}
+                  </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        patient.status === "Critico"
-                          ? "bg-red-100 text-red-700"
-                          : patient.status === "En Observacion"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-green-100 text-green-700"
-                      }`}
-                    >
-                      {patient.status}
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                      Registrado
                     </span>
                   </td>
                 </tr>
