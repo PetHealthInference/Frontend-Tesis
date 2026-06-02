@@ -142,7 +142,13 @@ export function PatientDetail() {
           <h2 className="text-xl font-bold text-gray-900">Historial clinico</h2>
         </div>
 
-        <PatientEvaluationHistory patientId={patient.id} />
+        <PatientEvaluationHistory
+          patientId={patient.id}
+          patientName={patient.name}
+          ownerName={ownerName}
+          speciesLabel={`${patient.species.name} - ${patient.breed?.name ?? "Sin raza"}`}
+          onNewEvaluation={() => navigate(`/evaluation?patient_id=${patient.id}`)}
+        />
       </div>
     </div>
   );

@@ -1,5 +1,16 @@
 import { useState } from "react";
-import { AlertCircle, Calendar, ChevronDown, ChevronRight, Loader2, RefreshCw } from "lucide-react";
+import {
+  AlertCircle,
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Filter,
+  Loader2,
+  RefreshCw,
+  Search,
+  X,
+} from "lucide-react";
 import {
   useEvaluation,
   useEvaluationHistory,
@@ -29,34 +40,179 @@ function formatProbability(value: number | null): string {
 
 interface PatientEvaluationHistoryProps {
   patientId: number;
+  patientName?: string;
+  ownerName?: string;
+  speciesLabel?: string;
+  onNewEvaluation?: () => void;
 }
 
-export function PatientEvaluationHistory({ patientId }: PatientEvaluationHistoryProps) {
+export function PatientEvaluationHistory({
+  patientId,
+  patientName,
+  ownerName,
+  speciesLabel,
+  onNewEvaluation,
+}: PatientEvaluationHistoryProps) {
   const { data, loading, error, refetch } = useEvaluationHistory(patientId);
-  const [expandedEvaluationId, setExpandedEvaluationId] = useState<number | null>(null);
+  const [expandedEvaluationIds, setExpandedEvaluationIds] = useState<number[]>([]);
+  const [search, setSearch] = useState("");
+  const [eventType, setEventType] = useState("all");
+  const [resultRisk, setResultRisk] = useState("all");
+  const [resultSearch, setResultSearch] = useState("");
 
   const toggleExpanded = (evaluationId: number) => {
-    setExpandedEvaluationId((current) => (current === evaluationId ? null : evaluationId));
+    setExpandedEvaluationIds((current) =>
+      current.includes(evaluationId)
+        ? current.filter((id) => id !== evaluationId)
+        : [...current, evaluationId],
+    );
+  };
+
+  const evaluationIds = data
+    .map((item) => item.evaluation_id)
+    .filter((evaluationId): evaluationId is number => evaluationId != null);
+  const eventTypes = Array.from(new Set(data.map((item) => item.event_type))).sort();
+
+  const filteredData = data.filter((item) => {
+    const normalizedSearch = search.trim().toLowerCase();
+    const matchesSearch =
+      !normalizedSearch ||
+      item.summary.toLowerCase().includes(normalizedSearch) ||
+      item.event_type.toLowerCase().includes(normalizedSearch) ||
+      String(item.evaluation_id ?? item.id).includes(normalizedSearch);
+    const matchesEventType = eventType === "all" || item.event_type === eventType;
+    return matchesSearch && matchesEventType;
+  });
+
+  const expandAll = () => {
+    setExpandedEvaluationIds(evaluationIds);
+  };
+
+  const collapseAll = () => {
+    setExpandedEvaluationIds([]);
+  };
+
+  const clearFilters = () => {
+    setSearch("");
+    setEventType("all");
+    setResultRisk("all");
+    setResultSearch("");
   };
 
   return (
     <div className="border border-gray-200 rounded-lg p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div>
-          <h3 className="font-semibold text-gray-900">Resultados historicos y reglas activadas</h3>
+          <h3 className="font-semibold text-gray-900">Historial clinico completo</h3>
           <p className="text-sm text-gray-600">
-            Trazabilidad de evaluaciones procesadas para este paciente.
+            Trazabilidad de evaluaciones, resultados de inferencia y reglas activadas.
           </p>
+          {(patientName || ownerName || speciesLabel) && (
+            <p className="text-sm text-gray-500 mt-1">
+              {patientName ?? "Paciente"}{speciesLabel ? ` - ${speciesLabel}` : ""}
+              {ownerName ? ` - Propietario: ${ownerName}` : ""}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          {onNewEvaluation && (
+            <button
+              type="button"
+              onClick={onNewEvaluation}
+              className="inline-flex items-center justify-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm"
+            >
+              <FileText className="w-4 h-4" />
+              Nueva evaluacion
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="inline-flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-sm"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refrescar
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+        <div className="md:col-span-2 relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar por resumen o evaluacion..."
+            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-gray-400" />
+          <select
+            value={eventType}
+            onChange={(event) => setEventType(event.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+          >
+            <option value="all">Todos los eventos</option>
+            {eventTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
         </div>
         <button
           type="button"
-          onClick={() => void refetch()}
+          onClick={clearFilters}
           className="inline-flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-sm"
         >
-          <RefreshCw className="w-4 h-4" />
-          Refrescar
+          <X className="w-4 h-4" />
+          Limpiar filtros
         </button>
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <input
+          type="text"
+          value={resultSearch}
+          onChange={(event) => setResultSearch(event.target.value)}
+          placeholder="Filtrar resultados por enfermedad..."
+          className="md:col-span-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+        />
+        <select
+          value={resultRisk}
+          onChange={(event) => setResultRisk(event.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+        >
+          <option value="all">Todos los riesgos</option>
+          <option value="Bajo">Bajo</option>
+          <option value="Moderado">Moderado</option>
+          <option value="Alto">Alto</option>
+          <option value="bajo">bajo</option>
+          <option value="moderado">moderado</option>
+          <option value="alto">alto</option>
+        </select>
+      </div>
+
+      {evaluationIds.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            type="button"
+            onClick={expandAll}
+            className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-sm"
+          >
+            Expandir evaluaciones
+          </button>
+          <button
+            type="button"
+            onClick={collapseAll}
+            className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-sm"
+          >
+            Colapsar evaluaciones
+          </button>
+        </div>
+      )}
 
       {loading && (
         <p className="text-sm text-gray-600 flex items-center gap-2">
@@ -78,13 +234,21 @@ export function PatientEvaluationHistory({ patientId }: PatientEvaluationHistory
         </p>
       )}
 
+      {!loading && !error && data.length > 0 && filteredData.length === 0 && (
+        <p className="text-sm text-gray-600">
+          No hay eventos que coincidan con los filtros actuales.
+        </p>
+      )}
+
       <div className="space-y-3">
-        {data.map((item) => (
+        {filteredData.map((item) => (
           <HistoryEntry
             key={item.id}
             item={item}
-            expanded={item.evaluation_id != null && expandedEvaluationId === item.evaluation_id}
+            expanded={item.evaluation_id != null && expandedEvaluationIds.includes(item.evaluation_id)}
             onToggle={toggleExpanded}
+            resultRisk={resultRisk}
+            resultSearch={resultSearch}
           />
         ))}
       </div>
@@ -96,9 +260,11 @@ interface HistoryEntryProps {
   item: PatientEvaluationHistoryItem;
   expanded: boolean;
   onToggle: (evaluationId: number) => void;
+  resultRisk: string;
+  resultSearch: string;
 }
 
-function HistoryEntry({ item, expanded, onToggle }: HistoryEntryProps) {
+function HistoryEntry({ item, expanded, onToggle, resultRisk, resultSearch }: HistoryEntryProps) {
   return (
     <div className="border border-gray-200 rounded-lg">
       <div className="p-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -129,13 +295,25 @@ function HistoryEntry({ item, expanded, onToggle }: HistoryEntryProps) {
       </div>
 
       {expanded && item.evaluation_id && (
-        <ExpandedEvaluation evaluationId={item.evaluation_id} />
+        <ExpandedEvaluation
+          evaluationId={item.evaluation_id}
+          resultRisk={resultRisk}
+          resultSearch={resultSearch}
+        />
       )}
     </div>
   );
 }
 
-function ExpandedEvaluation({ evaluationId }: { evaluationId: number }) {
+function ExpandedEvaluation({
+  evaluationId,
+  resultRisk,
+  resultSearch,
+}: {
+  evaluationId: number;
+  resultRisk: string;
+  resultSearch: string;
+}) {
   const evaluation = useEvaluation(evaluationId);
   const results = useEvaluationResults(evaluationId);
 
@@ -165,6 +343,8 @@ function ExpandedEvaluation({ evaluationId }: { evaluationId: number }) {
         results={results.data}
         loading={results.loading}
         error={results.error}
+        resultRisk={resultRisk}
+        resultSearch={resultSearch}
       />
     </div>
   );
@@ -174,9 +354,17 @@ interface EvaluationResultsBlockProps {
   results: EvaluationResult[];
   loading: boolean;
   error: string | null;
+  resultRisk: string;
+  resultSearch: string;
 }
 
-function EvaluationResultsBlock({ results, loading, error }: EvaluationResultsBlockProps) {
+function EvaluationResultsBlock({
+  results,
+  loading,
+  error,
+  resultRisk,
+  resultSearch,
+}: EvaluationResultsBlockProps) {
   if (loading) {
     return (
       <p className="text-sm text-gray-600 flex items-center gap-2">
@@ -190,6 +378,18 @@ function EvaluationResultsBlock({ results, loading, error }: EvaluationResultsBl
     return <p className="text-sm text-red-700">{error}</p>;
   }
 
+  const filteredResults = results.filter((result) => {
+    const normalizedSearch = resultSearch.trim().toLowerCase();
+    const matchesSearch =
+      !normalizedSearch ||
+      result.suggested_diagnosis.toLowerCase().includes(normalizedSearch) ||
+      (result.explanation?.toLowerCase().includes(normalizedSearch) ?? false);
+    const matchesRisk =
+      resultRisk === "all" ||
+      result.risk_level.toLowerCase() === resultRisk.toLowerCase();
+    return matchesSearch && matchesRisk;
+  });
+
   if (results.length === 0) {
     return (
       <p className="text-sm text-gray-600">
@@ -198,9 +398,17 @@ function EvaluationResultsBlock({ results, loading, error }: EvaluationResultsBl
     );
   }
 
+  if (filteredResults.length === 0) {
+    return (
+      <p className="text-sm text-gray-600">
+        La evaluacion tiene resultados, pero ninguno coincide con los filtros de enfermedad o riesgo.
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-3">
-      {results.map((result) => (
+      {filteredResults.map((result) => (
         <div key={result.id} className="bg-white border border-gray-200 rounded-lg p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>

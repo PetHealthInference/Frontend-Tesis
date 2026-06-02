@@ -60,6 +60,21 @@ export interface PatientEvaluationHistory {
   created_at?: string | null;
 }
 
+export interface EvaluationSummary {
+  event_id: number;
+  evaluation_id: number | null;
+  event_type: string;
+  summary: string;
+  created_at?: string | null;
+}
+
+export interface PatientFullHistory {
+  patient_id: number;
+  patient_name: string;
+  owner_name: string;
+  entries: PatientEvaluationHistory[];
+}
+
 export interface ProcessedEvaluationResult {
   enfermedad: string;
   probabilidad: number | null;
