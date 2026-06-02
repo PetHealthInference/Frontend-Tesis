@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router";
 import { ArrowLeft, FileText, Calendar, Activity, AlertCircle, Loader2, History } from "lucide-react";
 import { usePatient } from "../../hooks/usePatients";
+import { PatientEvaluationHistory } from "./PatientEvaluationHistory";
 
 function formatDate(value: string | null): string {
   if (!value) {
@@ -141,9 +142,7 @@ export function PatientDetail() {
           <h2 className="text-xl font-bold text-gray-900">Historial clinico</h2>
         </div>
 
-        <div className="border border-dashed border-gray-300 rounded-lg p-4 text-gray-600">
-          El paciente ya esta listo para iniciar evaluaciones clinicas. El historial se completara con los registros de evaluacion del siguiente flujo.
-        </div>
+        <PatientEvaluationHistory patientId={patient.id} />
       </div>
     </div>
   );

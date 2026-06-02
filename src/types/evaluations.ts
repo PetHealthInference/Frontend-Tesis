@@ -51,6 +51,15 @@ export interface EvaluationResult {
   activated_rules: ActivatedRule[];
 }
 
+export interface PatientEvaluationHistory {
+  id: number;
+  patient_id: number;
+  evaluation_id: number | null;
+  event_type: string;
+  summary: string;
+  created_at?: string | null;
+}
+
 export interface ProcessedEvaluationResult {
   enfermedad: string;
   probabilidad: number | null;

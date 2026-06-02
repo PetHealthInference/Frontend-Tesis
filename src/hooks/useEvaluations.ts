@@ -5,6 +5,7 @@ import type {
   EvaluationCreate,
   EvaluationResponse,
   EvaluationResult,
+  PatientEvaluationHistory,
   ProcessEvaluationResponse,
 } from "../types/evaluations";
 
@@ -70,6 +71,36 @@ export function useEvaluation(evaluationId: number | null) {
       setState({ data: null, loading: false, error: getErrorMessage(error) });
     }
   }, [evaluationId]);
+
+  useEffect(() => {
+    void refetch();
+  }, [refetch]);
+
+  return { ...state, refetch };
+}
+
+export function useEvaluationHistory(patientId: number | null) {
+  const [state, setState] = useState<AsyncState<PatientEvaluationHistory[]>>({
+    data: [],
+    loading: Boolean(patientId),
+    error: null,
+  });
+
+  const refetch = useCallback(async () => {
+    if (!patientId) {
+      setState({ data: [], loading: false, error: null });
+      return;
+    }
+
+    setState((current) => ({ ...current, loading: true, error: null }));
+
+    try {
+      const history = await evaluationService.getPatientHistory(patientId);
+      setState({ data: history, loading: false, error: null });
+    } catch (error) {
+      setState({ data: [], loading: false, error: getErrorMessage(error) });
+    }
+  }, [patientId]);
 
   useEffect(() => {
     void refetch();

@@ -3,6 +3,7 @@ import type {
   EvaluationCreate,
   EvaluationResponse,
   EvaluationResult,
+  PatientEvaluationHistory,
   ProcessEvaluationResponse,
 } from "../types/evaluations";
 import { apiClient } from "./apiClient";
@@ -18,6 +19,10 @@ export const evaluationService = {
 
   getEvaluationsByPatient(patientId: number): Promise<EvaluationResponse[]> {
     return apiClient.get<EvaluationResponse[]>(`/api/v1/patients/${patientId}/evaluations`);
+  },
+
+  getPatientHistory(patientId: number): Promise<PatientEvaluationHistory[]> {
+    return apiClient.get<PatientEvaluationHistory[]>(`/api/v1/patients/${patientId}/history`);
   },
 
   processEvaluation(evaluationId: number): Promise<ProcessEvaluationResponse> {
