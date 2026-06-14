@@ -1,47 +1,41 @@
-import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft, Brain, AlertTriangle, CheckCircle, FileText, Activity } from 'lucide-react';
+import { useNavigate, useParams } from "react-router";
+import { ArrowLeft, Brain, AlertCircle, Loader2, FileText } from "lucide-react";
+import { useEvaluationResults } from "../../hooks/useEvaluations";
+import { ReglasActivadas } from "./EvaluationResults";
+
+function formatProbability(value: number | null): string {
+  if (value == null) {
+    return "No calculada";
+  }
+  return `${Math.round(value * 100)}%`;
+}
+
+function riskClassName(riskLevel: string): string {
+  const normalized = riskLevel.toLowerCase();
+  if (normalized === "alto") {
+    return "bg-orange-100 text-orange-700 border-orange-200";
+  }
+  if (normalized === "moderado") {
+    return "bg-yellow-100 text-yellow-700 border-yellow-200";
+  }
+  return "bg-green-100 text-green-700 border-green-200";
+}
 
 export function InferenceEngine() {
   const navigate = useNavigate();
   const { evaluationId } = useParams();
+  const parsedEvaluationId = evaluationId && Number.isFinite(Number(evaluationId)) ? Number(evaluationId) : null;
+  const { data: results, loading, error, refetch } = useEvaluationResults(parsedEvaluationId);
+  const patientId = results[0]?.patient_id;
 
-  const inferenceResult = {
-    diagnosis: 'Traqueobronquitis Infecciosa Canina (Tos de las Perreras)',
-    confidence: 87,
-    riskLevel: 'Moderado',
-    reasoning: [
-      'Presencia de tos seca y persistente',
-      'Temperatura corporal elevada (39.2°C)',
-      'Frecuencia cardíaca dentro de rango normal',
-      'Sin signos de dificultad respiratoria severa',
-      'Historial reciente de contacto con otros perros',
-    ],
-    recommendations: [
-      'Administrar antibióticos de amplio espectro',
-      'Reposo absoluto durante 7-10 días',
-      'Evitar contacto con otros animales',
-      'Monitorear temperatura diariamente',
-      'Seguimiento en 3-5 días',
-    ],
-    relatedConditions: [
-      { name: 'Bronquitis Crónica', probability: 15 },
-      { name: 'Neumonía Bacterial', probability: 8 },
-      { name: 'Infección Viral Respiratoria', probability: 12 },
-    ],
-  };
-
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
-      case 'Crítico':
-        return 'bg-red-100 text-red-700 border-red-200';
-      case 'Alto':
-        return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'Moderado':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      default:
-        return 'bg-green-100 text-green-700 border-green-200';
-    }
-  };
+  if (!parsedEvaluationId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <AlertCircle className="w-16 h-16 text-gray-400 mb-4" />
+        <p className="text-gray-600">Identificador de evaluacion invalido.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -50,109 +44,92 @@ export function InferenceEngine() {
         className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
       >
         <ArrowLeft className="w-5 h-5" />
-        Volver a Evaluación
+        Volver
       </button>
 
       <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <Brain className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Resultados del Motor de Inferencia</h1>
-            <p className="text-gray-600">Evaluación ID: {evaluationId}</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className={`p-4 border-2 rounded-lg ${getRiskColor(inferenceResult.riskLevel)}`}>
-            <div className="flex items-center gap-2 mb-1">
-              <AlertTriangle className="w-5 h-5" />
-              <p className="text-sm font-medium">Nivel de Riesgo</p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <Brain className="w-7 h-7 text-white" />
             </div>
-            <p className="text-xl font-bold">{inferenceResult.riskLevel}</p>
-          </div>
-
-          <div className="p-4 border-2 border-indigo-200 bg-indigo-50 rounded-lg">
-            <div className="flex items-center gap-2 mb-1">
-              <Activity className="w-5 h-5 text-indigo-700" />
-              <p className="text-sm font-medium text-indigo-700">Confianza</p>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Resultados del Motor de Inferencia</h1>
+              <p className="text-gray-600">Evaluacion ID: {parsedEvaluationId}</p>
             </div>
-            <p className="text-xl font-bold text-indigo-900">{inferenceResult.confidence}%</p>
           </div>
 
-          <div className="p-4 border-2 border-green-200 bg-green-50 rounded-lg">
-            <div className="flex items-center gap-2 mb-1">
-              <CheckCircle className="w-5 h-5 text-green-700" />
-              <p className="text-sm font-medium text-green-700">Estado</p>
-            </div>
-            <p className="text-xl font-bold text-green-900">Diagnosticado</p>
-          </div>
+          <button
+            onClick={() => void refetch()}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+          >
+            Refrescar
+          </button>
         </div>
 
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Diagnóstico Sugerido</h2>
-          <div className="p-6 bg-indigo-50 border border-indigo-200 rounded-lg">
-            <p className="text-lg font-medium text-indigo-900">{inferenceResult.diagnosis}</p>
-          </div>
-        </div>
+        {loading && (
+          <p className="text-gray-600 flex items-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Cargando resultados reales desde backend...
+          </p>
+        )}
 
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Justificación del Diagnóstico</h2>
-          <div className="space-y-2">
-            {inferenceResult.reasoning.map((reason, idx) => (
-              <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                <p className="text-gray-700">{reason}</p>
-              </div>
-            ))}
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-red-800">{error}</p>
           </div>
-        </div>
+        )}
 
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Recomendaciones de Tratamiento</h2>
-          <div className="space-y-2">
-            {inferenceResult.recommendations.map((rec, idx) => (
-              <div key={idx} className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <FileText className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                <p className="text-gray-700">{rec}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        {!loading && !error && results.length === 0 && (
+          <p className="text-gray-600">
+            Esta evaluacion aun no tiene resultados persistidos. Procesala desde la pantalla de evaluacion clinica.
+          </p>
+        )}
 
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Diagnósticos Diferenciales</h2>
-          <div className="space-y-2">
-            {inferenceResult.relatedConditions.map((condition, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-700">{condition.name}</span>
-                <div className="flex items-center gap-3">
-                  <div className="w-32 bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-indigo-600 h-2 rounded-full"
-                      style={{ width: `${condition.probability}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium text-gray-600 w-12">{condition.probability}%</span>
+        <div className="space-y-4">
+          {results.map((result) => (
+            <div key={result.id} className="border border-gray-200 rounded-lg p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-lg font-semibold text-gray-900">{result.suggested_diagnosis}</p>
+                  <p className="text-sm text-gray-600">
+                    Metodo: {result.inference_method ?? "N/D"} - Score: {result.score}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className={`px-3 py-1 rounded-full border text-sm font-medium ${riskClassName(result.risk_level)}`}>
+                    Riesgo {result.risk_level}
+                  </span>
+                  <span className="px-3 py-1 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm font-medium">
+                    {formatProbability(result.probability)}
+                  </span>
                 </div>
               </div>
-            ))}
-          </div>
+
+              {result.explanation && (
+                <p className="text-sm text-gray-700 mt-3">{result.explanation}</p>
+              )}
+
+              <ReglasActivadas resultId={result.id} fallbackRules={result.activated_rules} />
+            </div>
+          ))}
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 mt-6">
           <button
-            onClick={() => navigate('/patients/1')}
-            className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition font-medium"
+            onClick={() => patientId && navigate(`/patients/${patientId}`)}
+            disabled={!patientId}
+            className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Guardar y Ver Paciente
+            <FileText className="w-5 h-5" />
+            Ver paciente
           </button>
           <button
-            onClick={() => navigate('/evaluation')}
+            onClick={() => navigate("/evaluation")}
             className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
           >
-            Nueva Evaluación
+            Nueva evaluacion
           </button>
         </div>
       </div>

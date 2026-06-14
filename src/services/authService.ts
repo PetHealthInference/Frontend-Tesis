@@ -1,12 +1,12 @@
+import { TOKEN_STORAGE_KEY } from "../config/auth";
 import type { LoginRequest, LoginResponse } from "../types/auth";
 import { apiClient } from "./apiClient";
-
-const TOKEN_STORAGE_KEY = "access_token";
+import { API_ROUTES } from "./apiRoutes";
 
 export const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
     const payload: LoginRequest = { email, password };
-    const response = await apiClient.post<LoginResponse>("/api/v1/auth/login", payload, {
+    const response = await apiClient.post<LoginResponse>(API_ROUTES.auth.login, payload, {
       skipAuth: true,
     });
 

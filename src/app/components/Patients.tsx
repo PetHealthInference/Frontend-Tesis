@@ -4,6 +4,7 @@ import { Search, PlusCircle, Filter, X, AlertCircle, CheckCircle2, Loader2 } fro
 import { useBreeds, useSpecies } from "../../hooks/useCatalogs";
 import { useOwners } from "../../hooks/useOwners";
 import { useCreatePatient, usePatients } from "../../hooks/usePatients";
+import { PATIENT_SEX_OPTIONS } from "../../config/patientCatalogs";
 import type { PatientCreate } from "../../types/patients";
 import { OwnerForm } from "./OwnerForm";
 
@@ -250,8 +251,11 @@ export function Patients() {
                   required
                 >
                   <option value="">Selecciona sexo</option>
-                  <option value="Macho">Macho</option>
-                  <option value="Hembra">Hembra</option>
+                  {PATIENT_SEX_OPTIONS.map((sex) => (
+                    <option key={sex} value={sex}>
+                      {sex}
+                    </option>
+                  ))}
                 </select>
               </div>
 

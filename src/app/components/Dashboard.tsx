@@ -1,22 +1,44 @@
-import { useNavigate } from 'react-router';
-import { Users, FileText, Brain, PlusCircle, Search, Activity, TrendingUp } from 'lucide-react';
+import { useNavigate } from "react-router";
+import { Users, FileText, PlusCircle, Search, Activity, TrendingUp, Loader2, AlertCircle } from "lucide-react";
+import { usePatients } from "../../hooks/usePatients";
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const { data: patients, loading, error, refetch } = usePatients();
+  const recentPatients = patients.slice(0, 3);
 
   const stats = [
-    { label: 'Pacientes Activos', value: '127', icon: Users, color: 'bg-blue-500' },
-    { label: 'Evaluaciones Hoy', value: '8', icon: FileText, color: 'bg-green-500' },
-    { label: 'Casos Críticos', value: '3', icon: Activity, color: 'bg-red-500' },
-    { label: 'Tasa de Éxito', value: '94%', icon: TrendingUp, color: 'bg-purple-500' },
+    { label: "Pacientes registrados", value: String(patients.length), icon: Users, color: "bg-blue-500" },
+    { label: "Evaluaciones hoy", value: "N/D", icon: FileText, color: "bg-green-500" },
+    { label: "Casos criticos", value: "N/D", icon: Activity, color: "bg-red-500" },
+    { label: "Tasa de exito", value: "N/D", icon: TrendingUp, color: "bg-purple-500" },
   ];
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Bienvenido al sistema de gestión clínica veterinaria</p>
+        <p className="text-gray-600 mt-1">Resumen operativo basado en datos reales del backend.</p>
       </div>
+
+      {loading && (
+        <p className="text-gray-600 flex items-center gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          Cargando indicadores...
+        </p>
+      )}
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-sm text-red-800">{error}</p>
+            <button onClick={() => void refetch()} className="text-sm text-red-700 underline mt-1">
+              Reintentar
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => (
@@ -36,37 +58,37 @@ export function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Acciones Rápidas</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Acciones rapidas</h2>
           <div className="space-y-3">
             <button
-              onClick={() => navigate('/patients?action=new')}
+              onClick={() => navigate("/patients?action=new")}
               className="w-full flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition group"
             >
               <PlusCircle className="w-6 h-6 text-gray-400 group-hover:text-indigo-600" />
               <div className="text-left">
-                <p className="font-medium text-gray-900 group-hover:text-indigo-900">Registrar Paciente</p>
+                <p className="font-medium text-gray-900 group-hover:text-indigo-900">Registrar paciente</p>
                 <p className="text-sm text-gray-500">Agregar un nuevo paciente al sistema</p>
               </div>
             </button>
 
             <button
-              onClick={() => navigate('/evaluation')}
+              onClick={() => navigate("/evaluation")}
               className="w-full flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition group"
             >
               <FileText className="w-6 h-6 text-gray-400 group-hover:text-indigo-600" />
               <div className="text-left">
-                <p className="font-medium text-gray-900 group-hover:text-indigo-900">Nueva Evaluación Clínica</p>
-                <p className="text-sm text-gray-500">Crear una evaluación para un paciente</p>
+                <p className="font-medium text-gray-900 group-hover:text-indigo-900">Nueva evaluacion clinica</p>
+                <p className="text-sm text-gray-500">Crear una evaluacion para un paciente</p>
               </div>
             </button>
 
             <button
-              onClick={() => navigate('/patients')}
+              onClick={() => navigate("/patients")}
               className="w-full flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition group"
             >
               <Search className="w-6 h-6 text-gray-400 group-hover:text-indigo-600" />
               <div className="text-left">
-                <p className="font-medium text-gray-900 group-hover:text-indigo-900">Buscar Paciente</p>
+                <p className="font-medium text-gray-900 group-hover:text-indigo-900">Buscar paciente</p>
                 <p className="text-sm text-gray-500">Consultar pacientes y su historial</p>
               </div>
             </button>
@@ -74,41 +96,35 @@ export function Dashboard() {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Pacientes Recientes</h2>
-          <div className="space-y-3">
-            {[
-              { name: 'Max', species: 'Perro', owner: 'Juan Pérez', status: 'Estable' },
-              { name: 'Luna', species: 'Gato', owner: 'María García', status: 'En Observación' },
-              { name: 'Rocky', species: 'Perro', owner: 'Carlos López', status: 'Crítico' },
-            ].map((patient, idx) => (
-              <div
-                key={idx}
-                onClick={() => navigate(`/patients/${idx + 1}`)}
-                className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium">{patient.name[0]}</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{patient.name}</p>
-                    <p className="text-sm text-gray-500">{patient.species} - {patient.owner}</p>
-                  </div>
-                </div>
-                <span
-                  className={`text-xs px-2 py-1 rounded-full ${
-                    patient.status === 'Crítico'
-                      ? 'bg-red-100 text-red-700'
-                      : patient.status === 'En Observación'
-                      ? 'bg-yellow-100 text-yellow-700'
-                      : 'bg-green-100 text-green-700'
-                  }`}
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Pacientes recientes</h2>
+          {recentPatients.length === 0 && !loading ? (
+            <p className="text-sm text-gray-600">No hay pacientes registrados para mostrar.</p>
+          ) : (
+            <div className="space-y-3">
+              {recentPatients.map((patient) => (
+                <div
+                  key={patient.id}
+                  onClick={() => navigate(`/patients/${patient.id}`)}
+                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition"
                 >
-                  {patient.status}
-                </span>
-              </div>
-            ))}
-          </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium">{patient.name[0]}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{patient.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {patient.species.name} - {patient.owner.first_name} {patient.owner.last_name ?? ""}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
+                    Registrado
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

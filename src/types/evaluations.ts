@@ -40,6 +40,7 @@ export interface ActivatedRule {
 export interface EvaluationResult {
   id: number;
   evaluation_id: number;
+  patient_id: number;
   disease_id: number;
   risk_level_id: number;
   suggested_diagnosis: string;

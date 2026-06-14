@@ -1,5 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
-const TOKEN_STORAGE_KEY = "access_token";
+import { TOKEN_STORAGE_KEY } from "../config/auth";
+import { env } from "../config/env";
 
 type RequestOptions = RequestInit & {
   skipAuth?: boolean;
@@ -26,7 +26,7 @@ function clearSession(): void {
 }
 
 function buildUrl(endpoint: string): string {
-  const normalizedBaseUrl = API_BASE_URL.replace(/\/$/, "");
+  const normalizedBaseUrl = env.apiBaseUrl.replace(/\/$/, "");
   const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   return `${normalizedBaseUrl}${normalizedEndpoint}`;
 }

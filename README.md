@@ -1,4 +1,4 @@
-# Frontend OE3 - Aplicacion Web Veterinaria
+﻿# Frontend OE3 - Aplicacion Web Veterinaria
 
 Frontend desarrollado con React, Vite y TypeScript para el OE3 de la tesis: aplicacion web con autenticacion, catalogos clinicos, gestion de propietarios/pacientes, evaluaciones con facts, procesamiento de inferencia y trazabilidad historica por paciente.
 
@@ -34,10 +34,10 @@ Frontend-Tesis/
 Crear o ajustar `.env`:
 
 ```env
-VITE_API_BASE_URL=http://localhost:8000
+VITE_API_BASE_URL=<URL_BASE_API>
 ```
 
-Si el backend se expone por proxy o puerto alternativo, actualizar esta variable. El `apiClient` usa `http://localhost:8000` como fallback.
+Si el backend se expone por proxy o puerto alternativo, actualizar esta variable. El `apiClient` usa rutas relativas como fallback para despliegues con proxy.
 
 ## Instalacion
 
@@ -223,3 +223,5 @@ npm run build
 ## Estado Academico
 
 El frontend cubre el flujo clinico completo del OE3: autenticacion, datos maestros, propietarios, pacientes, evaluaciones, inferencia hibrida, resultados, reglas activadas e historial clinico trazable por paciente.
+
+

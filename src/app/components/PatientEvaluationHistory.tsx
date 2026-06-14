@@ -16,6 +16,7 @@ import {
   useEvaluationHistory,
   useEvaluationResults,
 } from "../../hooks/useEvaluations";
+import { useRiskLevels } from "../../hooks/useCatalogs";
 import type { EvaluationResult, PatientEvaluationHistory as PatientEvaluationHistoryItem } from "../../types/evaluations";
 import { ReglasActivadas } from "./EvaluationResults";
 
@@ -54,6 +55,7 @@ export function PatientEvaluationHistory({
   onNewEvaluation,
 }: PatientEvaluationHistoryProps) {
   const { data, loading, error, refetch } = useEvaluationHistory(patientId);
+  const riskLevels = useRiskLevels();
   const [expandedEvaluationIds, setExpandedEvaluationIds] = useState<number[]>([]);
   const [search, setSearch] = useState("");
   const [eventType, setEventType] = useState("all");
@@ -186,12 +188,11 @@ export function PatientEvaluationHistory({
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
         >
           <option value="all">Todos los riesgos</option>
-          <option value="Bajo">Bajo</option>
-          <option value="Moderado">Moderado</option>
-          <option value="Alto">Alto</option>
-          <option value="bajo">bajo</option>
-          <option value="moderado">moderado</option>
-          <option value="alto">alto</option>
+          {riskLevels.data.map((riskLevel) => (
+            <option key={riskLevel.id} value={riskLevel.name}>
+              {riskLevel.name}
+            </option>
+          ))}
         </select>
       </div>
 
