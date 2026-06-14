@@ -1,20 +1,13 @@
-import { useEffect } from 'react';
-import { Outlet, useNavigate, NavLink } from 'react-router';
-import { Home, Users, FileText, Brain, LogOut } from 'lucide-react';
+import { Outlet, useNavigate, NavLink } from "react-router";
+import { Home, Users, FileText, LogOut } from "lucide-react";
+import { authService } from "../../services/authService";
 
 export function Layout() {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const isAuthenticated = localStorage.getItem('isAuthenticated');
-    if (!isAuthenticated) {
-      navigate('/login');
-    }
-  }, [navigate]);
-
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    navigate('/login');
+    authService.logout();
+    navigate("/login");
   };
 
   return (
@@ -37,8 +30,8 @@ export function Layout() {
                   className={({ isActive }) =>
                     `flex items-center gap-2 px-4 py-2 rounded-lg transition ${
                       isActive
-                        ? 'bg-indigo-50 text-indigo-700'
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? "bg-indigo-50 text-indigo-700"
+                        : "text-gray-600 hover:bg-gray-100"
                     }`
                   }
                 >
@@ -51,8 +44,8 @@ export function Layout() {
                   className={({ isActive }) =>
                     `flex items-center gap-2 px-4 py-2 rounded-lg transition ${
                       isActive
-                        ? 'bg-indigo-50 text-indigo-700'
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? "bg-indigo-50 text-indigo-700"
+                        : "text-gray-600 hover:bg-gray-100"
                     }`
                   }
                 >
@@ -65,8 +58,8 @@ export function Layout() {
                   className={({ isActive }) =>
                     `flex items-center gap-2 px-4 py-2 rounded-lg transition ${
                       isActive
-                        ? 'bg-indigo-50 text-indigo-700'
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? "bg-indigo-50 text-indigo-700"
+                        : "text-gray-600 hover:bg-gray-100"
                     }`
                   }
                 >
@@ -82,7 +75,7 @@ export function Layout() {
                 className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 transition"
               >
                 <LogOut className="w-5 h-5" />
-                <span className="hidden sm:inline">Cerrar Sesión</span>
+                <span className="hidden sm:inline">Cerrar Sesion</span>
               </button>
             </div>
           </div>

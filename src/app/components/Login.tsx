@@ -1,22 +1,33 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { LogIn, AlertCircle } from 'lucide-react';
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { LogIn, AlertCircle } from "lucide-react";
+import { ApiError } from "../../services/apiClient";
+import { authService } from "../../services/authService";
 
 export function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
+    setIsLoading(true);
 
-    if (email === 'admin@vetclinic.com' && password === 'admin123') {
-      localStorage.setItem('isAuthenticated', 'true');
-      navigate('/');
-    } else {
-      setError('Correo electrónico o contraseña incorrectos');
+    try {
+      await authService.login(email, password);
+      navigate("/");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setError("Correo electronico o contrasena incorrectos");
+        return;
+      }
+
+      setError(err instanceof Error ? err.message : "No fue posible iniciar sesion");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -34,7 +45,7 @@ export function Login() {
             VetClinic
           </h1>
           <p className="text-center text-gray-600 mb-8">
-            Sistema de Gestión Clínica Veterinaria
+            Sistema de Gestion Clinica Veterinaria
           </p>
 
           {error && (
@@ -47,7 +58,7 @@ export function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Correo Electrónico
+                Correo Electronico
               </label>
               <input
                 id="email"
@@ -62,7 +73,7 @@ export function Login() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Contraseña
+                Contrasena
               </label>
               <input
                 id="password"
@@ -70,24 +81,19 @@ export function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                placeholder="••••••••"
+                placeholder="********"
                 required
               />
             </div>
 
             <button
               type="submit"
-              className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition font-medium"
+              disabled={isLoading}
+              className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Iniciar Sesión
+              {isLoading ? "Iniciando sesion..." : "Iniciar Sesion"}
             </button>
           </form>
-
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800 font-medium mb-1">Credenciales de prueba:</p>
-            <p className="text-sm text-blue-700">Email: admin@vetclinic.com</p>
-            <p className="text-sm text-blue-700">Contraseña: admin123</p>
-          </div>
         </div>
       </div>
     </div>
