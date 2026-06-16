@@ -179,3 +179,79 @@
     line-height: 1.5;
   }
 }
+
+@layer components {
+  .dark .bg-white {
+    background-color: rgb(15 23 42);
+  }
+
+  .dark .bg-gray-50 {
+    background-color: rgb(30 41 59);
+  }
+
+  .dark .bg-gray-100 {
+    background-color: rgb(51 65 85);
+  }
+
+  .dark .bg-gray-200 {
+    background-color: rgb(71 85 105);
+  }
+
+  .dark .text-gray-900 {
+    color: rgb(248 250 252);
+  }
+
+  .dark .text-gray-800,
+  .dark .text-gray-700 {
+    color: rgb(203 213 225);
+  }
+
+  .dark .text-gray-600,
+  .dark .text-gray-500 {
+    color: rgb(148 163 184);
+  }
+
+  .dark .text-gray-400 {
+    color: rgb(100 116 139);
+  }
+
+  .dark .border-gray-300,
+  .dark .border-gray-200 {
+    border-color: rgb(51 65 85);
+  }
+
+  .dark input,
+  .dark select,
+  .dark textarea {
+    background-color: rgb(15 23 42);
+    border-color: rgb(51 65 85);
+    color: rgb(226 232 240);
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: rgb(100 116 139);
+  }
+
+  .dark option {
+    background-color: rgb(15 23 42);
+    color: rgb(226 232 240);
+  }
+
+  .dark pre {
+    color: rgb(203 213 225);
+  }
+
+  .dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgb(51 65 85);
+  }
+
+  .dark .hover\:bg-gray-50:hover,
+  .dark .hover\:bg-gray-100:hover {
+    background-color: rgb(30 41 59);
+  }
+
+  .dark .disabled\:bg-gray-100:disabled {
+    background-color: rgb(30 41 59);
+  }
+}
