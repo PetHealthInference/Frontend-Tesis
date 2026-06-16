@@ -1,11 +1,16 @@
-import { useState } from "react";
-import { Loader2, UserPlus } from "lucide-react";
-import { useCreateOwner } from "../../hooks/useOwners";
-import type { Owner, OwnerCreate } from "../../types/owners";
+import { useEffect, useState } from "react";
+import { Loader2, Save, UserPlus } from "lucide-react";
+import { useCreateOwner, useUpdateOwner } from "../../hooks/useOwners";
+import type { Owner, OwnerCreate, OwnerUpdate } from "../../types/owners";
 
 interface OwnerFormProps {
-  onCreated: (owner: Owner) => void;
+  mode?: "create" | "edit";
+  initialOwner?: Owner | null;
+  onCreated?: (owner: Owner) => void;
+  onUpdated?: (owner: Owner) => void;
   onAfterCreate?: () => Promise<void> | void;
+  onAfterUpdate?: () => Promise<void> | void;
+  onCancel?: () => void;
 }
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -16,16 +21,41 @@ function normalizeOptional(value: string): string | null {
   return trimmed ? trimmed : null;
 }
 
-export function OwnerForm({ onCreated, onAfterCreate }: OwnerFormProps) {
-  const { loading, error, success, submit } = useCreateOwner();
+function ownerToForm(owner?: Owner | null) {
+  return {
+    first_name: owner?.first_name ?? "",
+    last_name: owner?.last_name ?? "",
+    phone: owner?.phone ?? "",
+    email: owner?.email ?? "",
+    address: owner?.address ?? "",
+  };
+}
+
+export function OwnerForm({
+  mode = "create",
+  initialOwner = null,
+  onCreated,
+  onUpdated,
+  onAfterCreate,
+  onAfterUpdate,
+  onCancel,
+}: OwnerFormProps) {
+  const createOwner = useCreateOwner();
+  const updateOwner = useUpdateOwner();
   const [localError, setLocalError] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
-    phone: "",
-    email: "",
-    address: "",
-  });
+  const [form, setForm] = useState(ownerToForm(initialOwner));
+
+  const isEdit = mode === "edit";
+  const loading = isEdit ? updateOwner.loading : createOwner.loading;
+  const error = isEdit ? updateOwner.error : createOwner.error;
+  const success = isEdit ? updateOwner.success : createOwner.success;
+
+  useEffect(() => {
+    setForm(ownerToForm(initialOwner));
+    setLocalError(null);
+    createOwner.reset();
+    updateOwner.reset();
+  }, [initialOwner?.id, mode]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -46,7 +76,7 @@ export function OwnerForm({ onCreated, onAfterCreate }: OwnerFormProps) {
       return;
     }
 
-    const payload: OwnerCreate = {
+    const payload: OwnerCreate | OwnerUpdate = {
       first_name: form.first_name.trim(),
       last_name: normalizeOptional(form.last_name),
       phone: normalizeOptional(form.phone),
@@ -54,17 +84,35 @@ export function OwnerForm({ onCreated, onAfterCreate }: OwnerFormProps) {
       address: normalizeOptional(form.address),
     };
 
-    const owner = await submit(payload);
+    if (isEdit) {
+      if (!initialOwner) {
+        setLocalError("Selecciona un propietario valido para editar.");
+        return;
+      }
+
+      const owner = await updateOwner.submit(initialOwner.id, payload);
+      await onAfterUpdate?.();
+      onUpdated?.(owner);
+      return;
+    }
+
+    const owner = await createOwner.submit(payload as OwnerCreate);
     await onAfterCreate?.();
-    onCreated(owner);
-    setForm({ first_name: "", last_name: "", phone: "", email: "", address: "" });
+    onCreated?.(owner);
+    setForm(ownerToForm(null));
   };
 
   return (
     <form onSubmit={handleSubmit} className="border border-gray-200 rounded-lg p-4 space-y-4">
       <div className="flex items-center gap-2">
-        <UserPlus className="w-5 h-5 text-indigo-600" />
-        <h2 className="font-semibold text-gray-900">Registrar propietario</h2>
+        {isEdit ? (
+          <Save className="w-5 h-5 text-indigo-600" />
+        ) : (
+          <UserPlus className="w-5 h-5 text-indigo-600" />
+        )}
+        <h2 className="font-semibold text-gray-900">
+          {isEdit ? "Editar propietario" : "Registrar propietario"}
+        </h2>
       </div>
 
       {(localError || error) && (
@@ -134,14 +182,25 @@ export function OwnerForm({ onCreated, onAfterCreate }: OwnerFormProps) {
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="inline-flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-      >
-        {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-        {loading ? "Registrando..." : "Crear propietario"}
-      </button>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <button
+          type="submit"
+          disabled={loading}
+          className="inline-flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+          {loading ? "Guardando..." : isEdit ? "Actualizar propietario" : "Crear propietario"}
+        </button>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+          >
+            Cancelar
+          </button>
+        )}
+      </div>
     </form>
   );
 }

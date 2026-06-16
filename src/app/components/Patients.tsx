@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { Search, PlusCircle, Filter, X, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { useBreeds, useSpecies } from "../../hooks/useCatalogs";
@@ -13,6 +13,7 @@ export function Patients() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const showNewForm = searchParams.get("action") === "new" || location.pathname.endsWith("/new");
+  const ownerIdParam = searchParams.get("owner_id");
 
   const { data: species, loading: speciesLoading, error: speciesError } = useSpecies();
   const { data: owners, loading: ownersLoading, error: ownersError, refetch: refetchOwners } = useOwners();
@@ -20,6 +21,7 @@ export function Patients() {
   const createPatient = useCreatePatient();
   const [search, setSearch] = useState("");
   const [filterSpecies, setFilterSpecies] = useState("all");
+  const [showQuickOwnerForm, setShowQuickOwnerForm] = useState(false);
   const [patientError, setPatientError] = useState<string | null>(null);
   const [patientSuccess, setPatientSuccess] = useState<string | null>(null);
   const [newPatient, setNewPatient] = useState({
@@ -31,6 +33,21 @@ export function Patients() {
     birth_date: "",
     weight: "",
   });
+
+  useEffect(() => {
+    if (!showNewForm || !ownerIdParam) {
+      return;
+    }
+
+    const ownerExists = owners.some((owner) => owner.id === Number(ownerIdParam));
+    if (!ownerExists) {
+      return;
+    }
+
+    setNewPatient((current) =>
+      current.owner_id === ownerIdParam ? current : { ...current, owner_id: ownerIdParam }
+    );
+  }, [ownerIdParam, owners, showNewForm]);
 
   const selectedSpeciesId = newPatient.species_id ? Number(newPatient.species_id) : null;
   const {
@@ -99,7 +116,7 @@ export function Patients() {
       await refetchPatients();
       setNewPatient({
         name: "",
-        owner_id: "",
+        owner_id: ownerIdParam ?? "",
         species_id: "",
         breed_id: "",
         sex: "",
@@ -142,10 +159,35 @@ export function Patients() {
           )}
 
           <div className="space-y-4">
-            <OwnerForm
-              onAfterCreate={refetchOwners}
-              onCreated={(owner) => setNewPatient((current) => ({ ...current, owner_id: String(owner.id) }))}
-            />
+            <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="font-semibold text-gray-900">Propietario del paciente</h2>
+                  <p className="text-sm text-gray-600">
+                    Flujo principal: crear el propietario en el modulo Propietarios y seleccionarlo aqui.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowQuickOwnerForm((current) => !current)}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition text-sm font-medium"
+                >
+                  {showQuickOwnerForm ? <X className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}
+                  {showQuickOwnerForm ? "Ocultar acceso rapido" : "Crear propietario rapido"}
+                </button>
+              </div>
+
+              {showQuickOwnerForm && (
+                <OwnerForm
+                  onCancel={() => setShowQuickOwnerForm(false)}
+                  onAfterCreate={refetchOwners}
+                  onCreated={(owner) => {
+                    setNewPatient((current) => ({ ...current, owner_id: String(owner.id) }));
+                    setShowQuickOwnerForm(false);
+                  }}
+                />
+              )}
+            </div>
 
             <form onSubmit={handleCreatePatient} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -170,7 +212,7 @@ export function Patients() {
                   ))}
                 </select>
                 <p className="text-sm text-gray-500 mt-2">
-                  El listado proviene de GET /api/v1/owners/. Si creas un propietario arriba, se selecciona automaticamente.
+                  El listado proviene de GET /api/v1/owners/. El payload final envia owner_id numerico al backend.
                 </p>
               </div>
 

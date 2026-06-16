@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ownerService } from "../services/ownerService";
-import type { Owner, OwnerCreate, OwnerResponse } from "../types/owners";
+import type { Owner, OwnerCreate, OwnerResponse, OwnerUpdate } from "../types/owners";
 
 interface AsyncState<T> {
   data: T;
@@ -104,4 +104,73 @@ export function useCreateOwner() {
   }, []);
 
   return { data, loading, error, success, submit, reset };
+}
+
+export function useUpdateOwner() {
+  const [data, setData] = useState<OwnerResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const submit = useCallback(async (ownerId: number, payload: OwnerUpdate) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const owner = await ownerService.updateOwner(ownerId, payload);
+      setData(owner);
+      setSuccess(`Propietario ${owner.first_name} actualizado correctamente.`);
+      return owner;
+    } catch (err) {
+      const message = getErrorMessage(err);
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const reset = useCallback(() => {
+    setData(null);
+    setError(null);
+    setSuccess(null);
+    setLoading(false);
+  }, []);
+
+  return { data, loading, error, success, submit, reset };
+}
+
+export function useDeleteOwner() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const submit = useCallback(async (ownerId: number) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      await ownerService.deleteOwner(ownerId);
+      setSuccess("Propietario eliminado correctamente.");
+    } catch (err) {
+      const message = getErrorMessage(err);
+      const normalizedMessage = message.toLowerCase().includes("registered patients")
+        ? "No se puede eliminar el propietario porque tiene pacientes asociados."
+        : message;
+      setError(normalizedMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const reset = useCallback(() => {
+    setError(null);
+    setSuccess(null);
+    setLoading(false);
+  }, []);
+
+  return { loading, error, success, submit, reset };
 }
