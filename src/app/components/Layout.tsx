@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, NavLink } from "react-router";
-import { Home, Users, FileText, LogOut } from "lucide-react";
+import { Home, Users, FileText, LogOut, UserRound } from "lucide-react";
 import { authService } from "../../services/authService";
 
 export function Layout() {
@@ -37,6 +37,20 @@ export function Layout() {
                 >
                   <Home className="w-5 h-5" />
                   <span>Inicio</span>
+                </NavLink>
+
+                <NavLink
+                  to="/owners"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-4 py-2 rounded-lg transition ${
+                      isActive
+                        ? "bg-indigo-50 text-indigo-700"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`
+                  }
+                >
+                  <UserRound className="w-5 h-5" />
+                  <span>Propietarios</span>
                 </NavLink>
 
                 <NavLink

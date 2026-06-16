@@ -1,6 +1,8 @@
 import { createBrowserRouter } from "react-router";
 import { Login } from "./components/Login";
 import { Dashboard } from "./components/Dashboard";
+import { Owners } from "./components/Owners";
+import { OwnerDetail } from "./components/OwnerDetail";
 import { Patients } from "./components/Patients";
 import { PatientDetail } from "./components/PatientDetail";
 import { ClinicalEvaluation } from "./components/ClinicalEvaluation";
@@ -21,6 +23,8 @@ export const router = createBrowserRouter([
         Component: Layout,
         children: [
           { index: true, Component: Dashboard },
+          { path: "owners", Component: Owners },
+          { path: "owners/:id", Component: OwnerDetail },
           { path: "patients", Component: Patients },
           { path: "patients/new", Component: Patients },
           { path: "patients/:id", Component: PatientDetail },
